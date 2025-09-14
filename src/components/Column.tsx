@@ -7,7 +7,7 @@ type Props = {
   tasks: Task[];
   onSelectTask: (task: Task) => void;
   onDeleteColumn: (id: string) => void;
-  dragHandleProps?: DraggableProvidedDragHandleProps;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null;
 };
 
 export default function ColumnComponent({
@@ -19,13 +19,13 @@ export default function ColumnComponent({
 }: Props) {
   return (
     <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-lg border border-gray-200 min-w-[250px] flex flex-col">
-      {/* Cabeçalho com cor */}
+      {/* Cabeçalho com drag handle */}
       <div
         className="flex justify-between items-center px-4 py-2 rounded-t-3xl"
         style={{ backgroundColor: col.color }}
-        {...dragHandleProps}
+        {...(dragHandleProps ?? {})}
       >
-        <h2 className="text-lg font-medium text-white">{col.title}</h2>
+        <h2 className="text-lg font-medium text-white cursor-grab">{col.title}</h2>
         <button
           onClick={() => onDeleteColumn(col.id)}
           className="text-white hover:text-gray-200 font-bold"
