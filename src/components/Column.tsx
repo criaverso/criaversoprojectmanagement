@@ -1,5 +1,5 @@
 import { Droppable, DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
-import { Column, Task } from "@/types";
+import { Column, Task } from "../types";
 import TaskCard from "./TaskCard";
 
 type Props = {

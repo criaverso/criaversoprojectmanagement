@@ -6,7 +6,7 @@ import {
   Droppable,
   Draggable,
 } from "@hello-pangea/dnd";
-import { Task, Column } from "@/types";
+import { Task, Column } from "../types";
 import ColumnComponent from "./Column";
 import TaskModal from "./TaskModal";
 import CreateTaskModal from "./CreateTaskModal";
