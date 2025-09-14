@@ -1,5 +1,5 @@
 import { Draggable } from "@hello-pangea/dnd";
-import { Task } from ˜../types";
+import { Task } from "../types";
 
 // Função simples para gerar cor a partir do nome
 const stringToColor = (str: string = "Task") => {
