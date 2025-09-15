@@ -1,207 +1,207 @@
 "use client";
-import { useEffect, useState } from "react";
-import {
-  DragDropContext,
-  DropResult,
-  Droppable,
-  Draggable,
-} from "@hello-pangea/dnd";
-import { Task, Column } from "../types";
+
+import { useEffect, useMemo, useState } from "react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { useSearchParams, useRouter } from "next/navigation";
+import TopBar from "./TopBar";
 import ColumnComponent from "./Column";
-import TaskModal from "./TaskModal";
-import CreateTaskModal from "./CreateTaskModal";
 import CreateColumnModal from "./CreateColumnModal";
-import TaskTypesModal from "./TaskTypesModal"; 
+import CreateTaskModal from "./CreateTaskModal";
+import TaskModal from "./TaskModal";
+import TaskTypesModal from "./TaskTypesModal";
+import { Column, Task } from "../types";
+
+const STORAGE_KEY = "kanban-data-v2";
+const PROJECT_PREFIX = "COMPANI";
 
 export default function KanbanBoard() {
   const [columns, setColumns] = useState<Column[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [taskTypes, setTaskTypes] = useState<string[]>([
-    "Task",
-    "Bug",
-    "Feature",
-    "Doc",
-  ]);
-  const [taskCounter, setTaskCounter] = useState(1);
-  const projectPrefix = "COMPANI";
+  const [types, setTypes] = useState<string[]>(["Task", "Bug", "Feature"]);
+  const [counter, setCounter] = useState(1); // para o code COMPANI-X
 
-  const [showCreateTask, setShowCreateTask] = useState(false);
-  const [newTaskColumnId, setNewTaskColumnId] = useState<string | null>(null);
   const [showCreateColumn, setShowCreateColumn] = useState(false);
+  const [showCreateTaskFor, setShowCreateTaskFor] = useState<string | null>(null);
+  const [showTypes, setShowTypes] = useState(false);
+
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const [showTaskTypes, setShowTaskTypes] = useState(false);
-  // ---------- Persistência ----------
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ---- load
   useEffect(() => {
-    const saved = localStorage.getItem("kanban-data");
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      const { columns, tasks, taskTypes, taskCounter } = JSON.parse(saved);
-      setColumns(columns);
-      setTasks(tasks);
-      setTaskTypes(taskTypes);
-      setTaskCounter(taskCounter);
+      const data = JSON.parse(saved);
+      setColumns((data.columns ?? []).map((c: any) => ({ ...c, tasks: c.tasks ?? [] })));
+      setTypes(data.types ?? ["Task", "Bug", "Feature"]);
+      setCounter(data.counter ?? 1);
     } else {
       setColumns([
-        { id: "todo", title: "To Do", color: "#3b82f6" },
-        { id: "in-progress", title: "In Progress", color: "#f59e0b" },
-        { id: "done", title: "Done", color: "#10b981" },
+        { id: "todo", title: "To Do", color: "#3b82f6", tasks: [] },
+        { id: "in-progress", title: "In Progress", color: "#f59e0b", tasks: [] },
+        { id: "done", title: "Done", color: "#10b981", tasks: [] },
       ]);
     }
   }, []);
 
+  // ---- persist
   useEffect(() => {
-    const data = { columns, tasks, taskTypes, taskCounter };
-    localStorage.setItem("kanban-data", JSON.stringify(data));
-  }, [columns, tasks, taskTypes, taskCounter]);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ columns, types, counter })
+    );
+  }, [columns, types, counter]);
 
-  // ---------- CRUD ----------
-  const addTask = (title: string, description: string, type: string = "Task") => {
-    if (!newTaskColumnId) return;
-    const task: Task = {
-      id: Date.now().toString(),
-      code: `${projectPrefix}-${taskCounter}`,
-      type,
-      title,
-      description,
-      status: newTaskColumnId,
-    };
-    setTasks([...tasks, task]);
-    setTaskCounter(taskCounter + 1);
-    setNewTaskColumnId(null);
+  // ---- URL -> modal
+  useEffect(() => {
+    const code = searchParams.get("task"); // ex: COMPANI-3
+    if (!code) return setSelectedTask(null);
+    const t = columns.flatMap(c => c.tasks).find(tk => tk.code === code);
+    if (t) setSelectedTask(t);
+  }, [searchParams, columns]);
+
+  const openTaskByClick = (task: Task) => {
+    router.push(`?task=${task.code}`);
+  };
+  const closeTaskModal = () => {
+    router.push(``);
+    setSelectedTask(null);
   };
 
+  // ---- CRUD col
   const addColumn = (title: string, color: string) => {
-    setColumns([...columns, { id: Date.now().toString(), title, color }]);
+    setColumns(prev => [...prev, { id: Date.now().toString(), title, color, tasks: [] }]);
+  };
+  const deleteColumn = (id: string) => {
+    setColumns(prev => prev.filter(c => c.id !== id));
+  };
+
+  // ---- CRUD task
+  const addTask = (columnId: string, title: string, description: string, type: string) => {
+    setColumns(prev =>
+      prev.map(col =>
+        col.id === columnId
+          ? {
+              ...col,
+              tasks: [
+                ...(col.tasks ?? []),
+                {
+                  id: Date.now().toString(),
+                  code: `${PROJECT_PREFIX}-${counter}`,
+                  title,
+                  description,
+                  type,
+                },
+              ],
+            }
+          : col
+      )
+    );
+    setCounter(c => c + 1);
   };
 
   const updateTask = (task: Task) => {
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+    setColumns(prev =>
+      prev.map(col => ({
+        ...col,
+        tasks: (col.tasks ?? []).map(t => (t.id === task.id ? task : t)),
+      }))
+    );
   };
 
-  const deleteTask = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  const deleteTask = (id: string) => {
+    setColumns(prev =>
+      prev.map(col => ({ ...col, tasks: (col.tasks ?? []).filter(t => t.id !== id) }))
+    );
+    closeTaskModal();
   };
 
-  const deleteColumn = (colId: string) => {
-    setColumns((prev) => prev.filter((c) => c.id !== colId));
-    setTasks((prev) => prev.filter((t) => t.status !== colId));
-  };
-
-  // ---------- Drag & Drop ----------
-  const reorder = <T,>(list: T[], startIndex: number, endIndex: number): T[] => {
-    const result = Array.from(list);
-    const [removed] = result.splice(startIndex, 1);
-    result.splice(endIndex, 0, removed);
-    return result;
-  };
-
+  // ---- DnD
   const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId, type } = result;
+    const { source, destination, type } = result;
     if (!destination) return;
 
     if (type === "COLUMN") {
-      setColumns(reorder(columns, source.index, destination.index));
+      const next = Array.from(columns);
+      const [moved] = next.splice(source.index, 1);
+      next.splice(destination.index, 0, moved);
+      setColumns(next);
       return;
     }
 
-    if (type === "TASK") {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === draggableId ? { ...t, status: destination.droppableId } : t
-        )
+    // TASK
+    const sourceCol = columns.find(c => c.id === source.droppableId)!;
+    const destCol = columns.find(c => c.id === destination.droppableId)!;
+
+    const sourceTasks = Array.from(sourceCol.tasks ?? []);
+    const [moved] = sourceTasks.splice(source.index, 1);
+
+    if (sourceCol.id === destCol.id) {
+      sourceTasks.splice(destination.index, 0, moved);
+      setColumns(prev =>
+        prev.map(c => (c.id === sourceCol.id ? { ...c, tasks: sourceTasks } : c))
+      );
+    } else {
+      const destTasks = Array.from(destCol.tasks ?? []);
+      destTasks.splice(destination.index, 0, moved);
+      setColumns(prev =>
+        prev.map(c => {
+          if (c.id === sourceCol.id) return { ...c, tasks: sourceTasks };
+          if (c.id === destCol.id) return { ...c, tasks: destTasks };
+          return c;
+        })
       );
     }
   };
 
-  // ---------- Exportar / Importar ----------
+  // ---- Export/Import
   const exportData = () => {
-    const data = { columns, tasks, taskTypes, taskCounter };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
+    const blob = new Blob([JSON.stringify({ columns, types, counter }, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "kanban-data.json";
-    link.click();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kanban-data.json";
+    a.click();
     URL.revokeObjectURL(url);
   };
 
-  const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
+  const importData = (file: File) => {
+    const r = new FileReader();
+    r.onload = (e) => {
       try {
-        const data = JSON.parse(event.target?.result as string);
-        setColumns(data.columns || []);
-        setTasks(data.tasks || []);
-        setTaskTypes(data.taskTypes || []);
-        setTaskCounter(data.taskCounter || 1);
+        const data = JSON.parse((e.target?.result as string) ?? "{}");
+        setColumns((data.columns ?? []).map((c: any) => ({ ...c, tasks: c.tasks ?? [] })));
+        setTypes(data.types ?? ["Task", "Bug", "Feature"]);
+        setCounter(data.counter ?? 1);
       } catch {
         alert("Arquivo inválido");
       }
     };
-    reader.readAsText(file);
+    r.readAsText(file);
   };
 
-  // ---------- Render ----------
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 text-gray-900 font-[system-ui] flex flex-col">
-      {/* AppBar */}
-      <header className="sticky top-0 z-10 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between px-6 py-3">
-  <h1 className="text-xl font-semibold tracking-tight">Kanban Board</h1>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <TopBar
+        onExport={exportData}
+        onImport={importData}
+        onOpenTaskTypes={() => setShowTypes(true)}
+      />
 
-  <nav className="flex gap-6 text-sm font-medium relative">
-    {/* Menu Arquivo */}
-    <div className="relative group">
-      <button className="px-2 py-1 rounded-md hover:bg-gray-100">Arquivo ▾</button>
-      <div className="absolute hidden group-hover:flex flex-col mt-1 w-40 bg-white shadow-lg border rounded-md z-20">
-        <button
-          onClick={exportData}
-          className="px-4 py-2 text-left hover:bg-gray-100"
-        >
-          Exportar
-        </button>
-        <label className="px-4 py-2 text-left hover:bg-gray-100 cursor-pointer">
-          Importar
-          <input
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={importData}
-          />
-        </label>
-      </div>
-    </div>
-
-    {/* Menu Editar */}
-    <div className="relative group">
-      <button className="px-2 py-1 rounded-md hover:bg-gray-100">Editar ▾</button>
-      <div className="absolute hidden group-hover:flex flex-col mt-1 w-44 bg-white shadow-lg border rounded-md z-20">
-        <button
-          onClick={() => setShowTaskTypes(true)}
-          className="px-4 py-2 text-left hover:bg-gray-100"
-        >
-          Tipos de Tasks
-        </button>
-      </div>
-    </div>
-  </nav>
-</header>
-
-      {/* Conteúdo do board */}
-      <main className="flex-1 flex flex-col items-center p-6">
+      <main className="mx-auto max-w-6xl p-6">
         <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="board" direction="horizontal" type="COLUMN">
+          <Droppable droppableId="board" type="COLUMN" direction="horizontal">
             {(provided) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="flex w-full max-w-6xl gap-6 overflow-x-auto pb-4"
+                className="flex gap-6 items-start overflow-x-auto pb-4"
               >
                 {columns.map((col, index) => (
-                  <Draggable draggableId={col.id} index={index} key={col.id}>
+                  <Draggable key={col.id} draggableId={col.id} index={index}>
                     {(provided) => (
                       <div
                         ref={provided.innerRef}
@@ -210,29 +210,23 @@ export default function KanbanBoard() {
                       >
                         <ColumnComponent
                           col={col}
-                          tasks={tasks.filter((t) => t.status === col.id)}
-                          onSelectTask={setSelectedTask}
+                          onSelectTask={openTaskByClick}
                           onDeleteColumn={deleteColumn}
+                          onAddTask={(id) => setShowCreateTaskFor(id)}
                           dragHandleProps={provided.dragHandleProps}
-                          onAddTask={() => {
-                            setNewTaskColumnId(col.id);
-                            setShowCreateTask(true);
-                          }}
                         />
                       </div>
                     )}
                   </Draggable>
                 ))}
 
-                {/* Slot para nova coluna */}
-                <div className="min-w-[250px] flex items-center justify-center">
-                  <button
-                    onClick={() => setShowCreateColumn(true)}
-                    className="w-full h-full px-6 py-10 rounded-3xl bg-gray-100 text-gray-600 font-medium shadow-sm hover:shadow-md hover:bg-gray-200 active:scale-95 transition"
-                  >
-                    + Nova Coluna
-                  </button>
-                </div>
+                {/* “coluna” para criar nova */}
+                <button
+                  onClick={() => setShowCreateColumn(true)}
+                  className="min-w-[256px] h-[72px] self-start px-6 py-4 rounded-2xl bg-gray-100 text-gray-700 border border-dashed border-gray-300 hover:bg-gray-200 shadow-sm"
+                >
+                  + Nova Coluna
+                </button>
 
                 {provided.placeholder}
               </div>
@@ -242,23 +236,6 @@ export default function KanbanBoard() {
       </main>
 
       {/* Modais */}
-      {showCreateTask && newTaskColumnId && (
-        <CreateTaskModal
-          onClose={() => setShowCreateTask(false)}
-          onSave={addTask}
-          taskTypes={taskTypes}
-          setTaskTypes={setTaskTypes}
-        />
-      )}
-
-      {showTaskTypes && (
-  <TaskTypesModal
-    taskTypes={taskTypes}
-    setTaskTypes={setTaskTypes}
-    onClose={() => setShowTaskTypes(false)}
-  />
-)}
-
       {showCreateColumn && (
         <CreateColumnModal
           onClose={() => setShowCreateColumn(false)}
@@ -266,12 +243,28 @@ export default function KanbanBoard() {
         />
       )}
 
+      {showCreateTaskFor && (
+        <CreateTaskModal
+          onClose={() => setShowCreateTaskFor(null)}
+          onSave={(t, d, ty) => addTask(showCreateTaskFor, t, d, ty)}
+          taskTypes={types}
+        />
+      )}
+
       {selectedTask && (
         <TaskModal
           task={selectedTask}
-          onClose={() => setSelectedTask(null)}
+          onClose={closeTaskModal}
           onSave={updateTask}
           onDelete={deleteTask}
+        />
+      )}
+
+      {showTypes && (
+        <TaskTypesModal
+          taskTypes={types}
+          setTaskTypes={setTypes}
+          onClose={() => setShowTypes(false)}
         />
       )}
     </div>

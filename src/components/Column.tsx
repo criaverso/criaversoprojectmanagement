@@ -5,38 +5,34 @@ import TaskCard from "./TaskCard";
 
 type Props = {
   col: Column;
-  tasks: Task[];
   onSelectTask: (task: Task) => void;
   onDeleteColumn: (id: string) => void;
-  dragHandleProps?: DraggableProvidedDragHandleProps | null;
-  onAddTask: () => void;
+  onAddTask: (colId: string) => void;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null | undefined;
 };
 
 export default function ColumnComponent({
   col,
-  tasks,
   onSelectTask,
   onDeleteColumn,
-  dragHandleProps,
   onAddTask,
+  dragHandleProps,
 }: Props) {
   return (
-    <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-lg border border-gray-200 min-w-[250px] flex flex-col">
+    <div className="flex flex-col rounded-2xl bg-white shadow-md w-64">
+      {/* header */}
       <div
-        className="flex justify-between items-center px-4 py-2 rounded-t-3xl"
+        className="rounded-t-2xl px-4 py-2 text-white font-semibold flex justify-between items-center"
         style={{ backgroundColor: col.color }}
         {...(dragHandleProps ?? {})}
       >
-        <h2 className="text-lg font-medium text-white">{col.title}</h2>
-        <button
-          onClick={() => onDeleteColumn(col.id)}
-          className="text-white hover:text-gray-200 font-bold"
-          title="Excluir coluna"
-        >
+        <span>{col.title}</span>
+        <button onClick={() => onDeleteColumn(col.id)} className="font-bold">
           ×
         </button>
       </div>
 
+      {/* droppable area */}
       <Droppable droppableId={col.id} type="TASK">
         {(provided) => (
           <div
@@ -44,7 +40,7 @@ export default function ColumnComponent({
             {...provided.droppableProps}
             className="flex-1 p-4 space-y-3"
           >
-            {tasks.map((task, index) => (
+            {(col.tasks ?? []).map((task, index) => (
               <TaskCard
                 key={task.id}
                 task={task}
@@ -57,9 +53,10 @@ export default function ColumnComponent({
         )}
       </Droppable>
 
+      {/* add task */}
       <button
-        onClick={onAddTask}
-        className="m-3 px-4 py-2 text-sm rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700"
+        onClick={() => onAddTask(col.id)}
+        className="m-3 py-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100"
       >
         + Nova Task
       </button>

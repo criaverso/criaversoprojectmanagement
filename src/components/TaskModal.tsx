@@ -1,172 +1,113 @@
 "use client";
-import { useState } from "react";
 import { Task } from "../types";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useState } from "react";
 
 type Props = {
-  task: Task & { editing?: boolean };
+  task: Task;
   onClose: () => void;
-  onSave: (task: Task) => void; // editar task
+  onSave: (task: Task) => void;
   onDelete: (id: string) => void;
 };
 
 export default function TaskModal({ task, onClose, onSave, onDelete }: Props) {
-  const [editable, setEditable] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
-  const [description, setDescription] = useState(task.description);
+  const [description, setDescription] = useState(task.description || "");
   const [type, setType] = useState(task.type);
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40">
-      <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 w-[550px] max-h-[80vh] overflow-auto">
-        {editable ? (
-          <>
-            <h2 className="text-xl font-semibold mb-4">Editar Tarefa</h2>
+  const handleSave = () => {
+    onSave({ ...task, title, description, type });
+    setIsEditing(false);
+  };
 
-            {/* Tipo */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium mb-1">Tipo</label>
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
+        onDoubleClick={() => setIsEditing(true)} // 👉 Duplo clique ativa edição
+      >
+       {/* Barra superior estilo macOS */}
+<div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b relative">
+  {/* Botões do macOS à esquerda */}
+  <div className="flex gap-2 absolute left-4">
+    <button
+      onClick={onClose}
+      className="w-3.5 h-3.5 bg-red-500 rounded-full border border-red-600 hover:bg-red-600"
+      title="Fechar"
+    />
+    <span className="w-3.5 h-3.5 bg-yellow-400 rounded-full border border-yellow-500" />
+    <span className="w-3.5 h-3.5 bg-green-500 rounded-full border border-green-600" />
+  </div>
+
+  {/* Código da task centralizado */}
+  <h2 className="absolute left-1/2 -translate-x-1/2 text-sm font-mono text-gray-700">
+    {task.code}
+  </h2>
+
+  {/* Ícone de lixeira à direita */}
+  <button
+    onClick={() => onDelete(task.id)}
+    className="absolute right-4 text-gray-500 hover:text-red-600"
+    title="Excluir Task"
+  >
+    🗑
+  </button>
+</div>
+
+        {/* Conteúdo */}
+        <div className="p-6">
+          {isEditing ? (
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full border rounded-lg p-2 text-lg font-medium"
+              />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                className="w-full border rounded-lg p-2 font-mono text-sm"
+              />
               <input
                 type="text"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400"
+                className="w-full border rounded-lg p-2 font-medium"
               />
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Salvar
+                </button>
+              </div>
             </div>
+          ) : (
+            <div className="p-6">
+  <h3 className="text-lg font-semibold mb-4">{task.title}</h3>
 
-            {/* Título */}
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full mb-4 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-400"
-            />
+  {/* Badge do tipo com espaçamento elegante */}
+  <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium mb-6">
+    {task.type}
+  </span>
 
-            {/* Menu de formatação */}
-            <div className="flex gap-2 mb-3">
-              <button
-                onClick={() => setDescription((prev) => prev + "**negrito** ")}
-                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm"
-              >
-                <span className="font-bold">B</span>
-              </button>
-              <button
-                onClick={() => setDescription((prev) => prev + "*itálico* ")}
-                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm italic"
-              >
-                I
-              </button>
-              <button
-                onClick={() => setDescription((prev) => prev + "- item lista\n")}
-                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm"
-              >
-                • Lista
-              </button>
-              <button
-                onClick={() => setDescription((prev) => prev + "[texto](url) ")}
-                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm text-blue-600"
-              >
-                🔗
-              </button>
-              <button
-                onClick={() => setDescription((prev) => prev + "`código` ")}
-                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm font-mono"
-              >
-                {"</>"}
-              </button>
-            </div>
-
-            {/* Descrição */}
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full mb-4 p-3 rounded-xl border border-gray-300 h-36 focus:ring-2 focus:ring-blue-400"
-            />
-          </>
-        ) : (
-          <>
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-xl font-semibold">{task.title}</h2>
-              <span className="text-xs font-mono text-gray-500">{task.code}</span>
-            </div>
-            <span className="inline-block text-xs px-2 py-0.5 rounded-full font-medium bg-gray-200 text-gray-700 mb-4">
-              {task.type}
-            </span>
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ node, ...props }) => (
-                  <p className="text-gray-700 leading-relaxed mb-2" {...props} />
-                ),
-                strong: ({ node, ...props }) => (
-                  <strong className="font-semibold text-gray-900" {...props} />
-                ),
-                a: ({ node, ...props }) => (
-                  <a
-                    className="text-blue-600 underline"
-                    target="_blank"
-                    rel="noreferrer"
-                    {...props}
-                  />
-                ),
-                ul: ({ node, ...props }) => (
-                  <ul className="list-disc pl-5 space-y-1" {...props} />
-                ),
-                ol: ({ node, ...props }) => (
-                  <ol className="list-decimal pl-5 space-y-1" {...props} />
-                ),
-                li: ({ node, ...props }) => <li className="text-gray-700" {...props} />,
-                code: ({ node, ...props }) => (
-                  <code className="bg-gray-100 px-1 rounded text-sm font-mono" {...props} />
-                ),
-              }}
-            >
-              {task.description || "_Sem descrição_"}
-            </ReactMarkdown>
-          </>
-        )}
-
-        <div className="flex justify-between mt-6">
-          {/* Botão excluir */}
-          <button
-            onClick={() => {
-              onDelete(task.id);
-              onClose();
-            }}
-            className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 shadow-md"
-          >
-            Excluir
-          </button>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                if (editable) {
-                  onSave({
-                    ...task,
-                    title,
-                    description,
-                    type,
-                  });
-                  setEditable(false);
-                } else {
-                  onClose();
-                }
-              }}
-              className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300"
-            >
-              {editable ? "Salvar alterações" : "Fechar"}
-            </button>
-            {!editable && (
-              <button
-                onClick={() => setEditable(true)}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-              >
-                Editar
-              </button>
-            )}
-          </div>
+  <div className="prose-sm text-gray-800 max-w-none">
+  <ReactMarkdown components={{}}>
+    {task.description}
+  </ReactMarkdown>
+</div>
+</div>
+          )}
         </div>
       </div>
     </div>
