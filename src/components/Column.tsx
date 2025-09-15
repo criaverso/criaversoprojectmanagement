@@ -1,3 +1,4 @@
+"use client";
 import { Droppable, DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { Column, Task } from "../types";
 import TaskCard from "./TaskCard";
@@ -8,6 +9,7 @@ type Props = {
   onSelectTask: (task: Task) => void;
   onDeleteColumn: (id: string) => void;
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
+  onAddTask: () => void;
 };
 
 export default function ColumnComponent({
@@ -16,16 +18,16 @@ export default function ColumnComponent({
   onSelectTask,
   onDeleteColumn,
   dragHandleProps,
+  onAddTask,
 }: Props) {
   return (
     <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-lg border border-gray-200 min-w-[250px] flex flex-col">
-      {/* Cabeçalho com drag handle */}
       <div
         className="flex justify-between items-center px-4 py-2 rounded-t-3xl"
         style={{ backgroundColor: col.color }}
         {...(dragHandleProps ?? {})}
       >
-        <h2 className="text-lg font-medium text-white cursor-grab">{col.title}</h2>
+        <h2 className="text-lg font-medium text-white">{col.title}</h2>
         <button
           onClick={() => onDeleteColumn(col.id)}
           className="text-white hover:text-gray-200 font-bold"
@@ -35,7 +37,6 @@ export default function ColumnComponent({
         </button>
       </div>
 
-      {/* Área de tasks */}
       <Droppable droppableId={col.id} type="TASK">
         {(provided) => (
           <div
@@ -55,6 +56,13 @@ export default function ColumnComponent({
           </div>
         )}
       </Droppable>
+
+      <button
+        onClick={onAddTask}
+        className="m-3 px-4 py-2 text-sm rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700"
+      >
+        + Nova Task
+      </button>
     </div>
   );
 }
