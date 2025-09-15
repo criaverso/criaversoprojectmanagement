@@ -24,11 +24,11 @@ export default function TaskModal({ task, onClose, onSave, onDelete }: Props) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+        className="backdrop-blur-xl bg-white/30 border border-white/40 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
         onDoubleClick={() => setEditing(true)}
       >
-        {/* 🔹 Barra estilo macOS */}
-        <div className="relative flex items-center justify-center h-10 bg-gray-100 border-b">
+        {/* 🔹 Barra superior estilo macOS */}
+        <div className="relative flex items-center justify-center h-10 backdrop-blur-lg bg-white/20 border-b border-white/30">
           {/* botões à esquerda */}
           <div className="flex gap-2 absolute left-4">
             <button
@@ -41,12 +41,12 @@ export default function TaskModal({ task, onClose, onSave, onDelete }: Props) {
           </div>
 
           {/* código centralizado */}
-          <h2 className="text-sm font-mono text-gray-700">{task.code}</h2>
+          <h2 className="text-sm font-mono text-gray-800 drop-shadow">{task.code}</h2>
 
           {/* lixeira à direita */}
           <button
             onClick={() => onDelete(task.id)}
-            className="absolute right-4 text-gray-500 hover:text-red-600"
+            className="absolute right-4 text-gray-600 hover:text-red-600"
             title="Excluir Task"
           >
             🗑
@@ -54,29 +54,29 @@ export default function TaskModal({ task, onClose, onSave, onDelete }: Props) {
         </div>
 
         {/* 🔹 Conteúdo */}
-        <div className="p-6">
+        <div className="p-6 backdrop-blur-md bg-white/40">
           {editing ? (
             <div className="space-y-4">
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full border rounded-lg p-2 text-lg font-medium"
+                className="w-full border rounded-lg p-2 text-lg font-medium bg-white/60 backdrop-blur-sm"
               />
               <input
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full border rounded-lg p-2"
+                className="w-full border rounded-lg p-2 bg-white/60 backdrop-blur-sm"
               />
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={8}
-                className="w-full border rounded-lg p-2 font-mono text-sm"
+                className="w-full border rounded-lg p-2 font-mono text-sm bg-white/60 backdrop-blur-sm"
               />
               <div className="text-right">
                 <button
                   onClick={save}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow"
                 >
                   Salvar
                 </button>
@@ -85,13 +85,13 @@ export default function TaskModal({ task, onClose, onSave, onDelete }: Props) {
           ) : (
             <div className="space-y-6">
               <h3 className="text-xl font-semibold">{title}</h3>
-              <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+              <span className="inline-block px-3 py-1 bg-white/50 backdrop-blur-sm border border-white/30 text-gray-800 rounded-full text-sm font-medium shadow-sm">
                 {type}
               </span>
-              <div className="prose-sm text-gray-800 max-w-none">
+              <div className="prose-sm text-gray-800 max-w-none bg-white/40 backdrop-blur-sm p-4 rounded-xl border border-white/30 shadow-sm">
                 <ReactMarkdown>{description || "_Sem descrição_"}</ReactMarkdown>
               </div>
-              <p className="text-xs text-gray-400 text-right">
+              <p className="text-xs text-gray-500 text-right">
                 (Dê dois cliques para editar)
               </p>
             </div>
